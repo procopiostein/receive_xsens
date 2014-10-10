@@ -17,8 +17,6 @@ and is intended for use only by Xsens Technologies BV and
 #include <stdio.h>
 #include <iostream>
 
-#define SERIAL_KEY_SIZE	30
-
 extern "C"
 int setSerialKey()
 {
@@ -31,14 +29,11 @@ int setSerialKey()
 			fp = fopen("serial.key", "r");
 			if (fp)
 			{
-				size_t result = fread(serialKey, 1, SERIAL_KEY_SIZE, fp);
+				fread(serialKey, 1, 30, fp);
 				fclose(fp);
 
-				if (result == SERIAL_KEY_SIZE)
-				{           
-                    if (XsControl::setSerialKey(serialKey))
-                        return 1;
-                }
+				if (XsControl::setSerialKey(serialKey))
+					return 1;
 			}
 		}
 
@@ -61,4 +56,3 @@ int setSerialKey()
 	}
 	return XsControl::setSerialKey(SERIAL_KEY);
 }
-

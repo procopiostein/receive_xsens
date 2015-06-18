@@ -29,6 +29,7 @@ and is intended for use only by Xsens Technologies BV and
 
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
+#include <geometry_msgs/TwistStamped.h>
 
 class CallbackHandler : public XsCallback
 {
@@ -108,6 +109,7 @@ int main(int argc, char** argv)
 	ros::NodeHandle nh;
 
   	ros::Publisher publisher = nh.advertise<sensor_msgs::Imu> ("/imu/data", 1);
+    ros::Publisher vel_publisher = nh.advertise<geometry_msgs::TwistStamped> ("/velocity", 1);
 
 	if (!setSerialKey())
 	{
@@ -127,7 +129,7 @@ int main(int argc, char** argv)
 
 		// Find an MTi / MTx / MTmk4 device
 		XsPortInfoArray::const_iterator mtPort = portInfoArray.begin();
-		while (mtPort != portInfoArray.end() && !mtPort->deviceId().isMtix() && !mtPort->deviceId().isMtMk4()) {++mtPort;}
+		while (mtPort != portInfoArray.end() && /*!mtPort->deviceId().isMtix() &&*/ !mtPort->deviceId().isMtMk4()) {++mtPort;}
 		if (mtPort == portInfoArray.end())
 		{
 			throw std::runtime_error("No MTi / MTx / MTmk4 device found. Aborting.");
@@ -169,6 +171,10 @@ int main(int argc, char** argv)
 					sensor_msgs::Imu imuData;
 					imuData.header.frame_id = "/imu";
 					imuData.header.stamp = ros::Time::now();
+                                        
+                    geometry_msgs::TwistStamped twistData;
+                    twistData.header.frame_id = "/base_imu";
+                    twistData.header.stamp = ros::Time::now();
 
 					// Retrieve a packet
 					XsDataPacket packet = callback.getNextPacket();
@@ -198,6 +204,10 @@ int main(int argc, char** argv)
 						imuData.angular_velocity.x = gyroscope.at(0);
 						imuData.angular_velocity.y = gyroscope.at(1);
 						imuData.angular_velocity.z = gyroscope.at(2);
+                                                
+                        twistData.twist.angular.x = gyroscope.at(0);
+                        twistData.twist.angular.y = gyroscope.at(1);
+                        twistData.twist.angular.z = gyroscope.at(2);
 					}
 
 					// Get the acceleration data
@@ -209,6 +219,13 @@ int main(int argc, char** argv)
 						imuData.linear_acceleration.z = acceleration.at(2);
 					}
 
+					// Get Velocity Data
+                    if( packet.containsVelocity() ){
+                        XsVector velocity = packet.velocity();
+                        twistData.twist.linear.x = velocity.at(0);
+                        twistData.twist.linear.y = velocity.at(1);
+                        twistData.twist.linear.z = velocity.at(2);
+                                        }
 					// Get the magnetic field data
                                         /*if (packet.containsCalibratedMagneticField()) {
 						XsVector magneticField = packet.calibratedMagneticField();
@@ -216,6 +233,7 @@ int main(int argc, char** argv)
 
 					// Publish ROS message
 					publisher.publish(imuData);
+                    vel_publisher.publish(twistData);
 				}
 
     				ros::spinOnce();

@@ -17,6 +17,7 @@ catkin_package(
   roscpp
   std_msgs
   sensor_msgs
+  geometry_msgs
 )
 
 ###########
